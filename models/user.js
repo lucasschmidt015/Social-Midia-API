@@ -1,6 +1,8 @@
 const Sequelize = require("sequelize");
 const sequelize = require("../utils/database");
 
+const Joi = require("joi");
+
 const User = sequelize.define("User", {
   id: {
     type: Sequelize.INTEGER,
@@ -21,5 +23,16 @@ const User = sequelize.define("User", {
     allowNull: false,
   },
 });
+
+User.validate = (body) => {
+  const userSchema = Joi.object({
+    name: Joi.string().alphanum().min(3).max(30).required(),
+    email: Joi.string().email().required(),
+    password: Joi.string().required(),
+    confirmPassword: Joi.string().valid(Joi.ref("password")).required(),
+  });
+
+  return userSchema.validate(body);
+};
 
 module.exports = User;
