@@ -19,6 +19,13 @@ app.use(express.static(path.join(__dirname, "resources")));
 
 app.use(userRouter);
 
+app.use((error, req, res, next) => {
+  const status = error.statusCode || 500;
+  const message = error.message;
+  const data = error.data;
+  res.status(status).json({ message: message, data: data });
+});
+
 sequelize
   .sync({ force: false })
   .then(() => {

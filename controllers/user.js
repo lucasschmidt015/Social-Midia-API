@@ -1,4 +1,5 @@
 const User = require("../models/user");
+const bcrypt = require("bcryptjs");
 
 /**
  * Retrieves user data based on the specified user ID.
@@ -15,10 +16,9 @@ exports.getUser = async (req, res, next) => {
     const userData = await User.findByPk(userId);
 
     if (!userData) {
-      return res.status(404).json({
-        success: false,
-        error: `No user founded for the id: ${userId}`,
-      });
+      const error = new Error(`No user founded for the id: ${userId}`);
+      error.statusCode = 401;
+      throw new Error(error);
     }
 
     return res.status(200).json({
@@ -26,7 +26,10 @@ exports.getUser = async (req, res, next) => {
       data: userData,
     });
   } catch (err) {
-    console.log(err);
+    if (!err.statusCode) {
+      err.statusCode = 500;
+    }
+    next(err);
   }
 };
 
@@ -34,9 +37,11 @@ exports.createUser = async (req, res, next) => {
   const { error } = User.validate(req.body);
 
   if (error) {
-    return res
-      .status(400)
-      .json({ success: false, error: error.details[0].message });
+    console.log(error);
+    const resError = new Error("Some data no metch.");
+    resError.statusCode = 400;
+    resError.data = { success: false, error: error.details[0].message };
+    return next(resError);
   }
 
   const name = req.body.name;
@@ -44,7 +49,31 @@ exports.createUser = async (req, res, next) => {
   const password = req.body.password;
   const confirmPassword = req.body.password;
 
-  res.status(404).json({
-    message: "AAAA",
-  });
+  try {
+    const emailExists = await User.findOne({ where: { email: email } });
+
+    if (emailExists) {
+      const newError = new Error("This email is already registered.");
+      newError.statusCode = 409;
+      throw newError;
+    }
+
+    const encryptedPassword = await bcrypt.hash(password, 12);
+
+    const createdUser = await User.create({
+      name,
+      email,
+      password: encryptedPassword,
+    });
+
+    res.status(201).json({
+      success: true,
+      user: createdUser,
+    });
+  } catch (err) {
+    if (!err.statusCode) {
+      err.statusCode = 500;
+    }
+    next(err);
+  }
 };
