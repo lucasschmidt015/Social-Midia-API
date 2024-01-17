@@ -1,5 +1,17 @@
+// Sequelize models
 const User = require("../models/user");
+
+//Third-part packages
 const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+
+//env
+const {
+  parsed: { TOKEN_SECRET },
+} = require("dotenv").config();
+
+//general
+const utils = require("../utils/utils");
 
 /**
  * Retrieves user data based on the specified user ID.
@@ -16,19 +28,14 @@ exports.getUser = async (req, res, next) => {
     const userData = await User.findByPk(userId);
 
     if (!userData) {
-      const error = new Error(`No user founded for the id: ${userId}`);
-      error.statusCode = 401;
-      throw new Error(error);
+      throw utils.createNewError(`No user founded for the id: ${userId}`, 401);
     }
 
-    return res.status(200).json({
+    return utils.sendResponse(res, 200, {
       success: true,
       data: userData,
     });
   } catch (err) {
-    if (!err.statusCode) {
-      err.statusCode = 500;
-    }
     next(err);
   }
 };
@@ -37,11 +44,12 @@ exports.createUser = async (req, res, next) => {
   const { error } = User.validate(req.body);
 
   if (error) {
-    console.log(error);
-    const resError = new Error("Some data no metch.");
-    resError.statusCode = 400;
-    resError.data = { success: false, error: error.details[0].message };
-    return next(resError);
+    return next(
+      utils.createNewError("Some data no metch.", 400, {
+        success: false,
+        error: error.details[0].message,
+      })
+    );
   }
 
   const name = req.body.name;
@@ -53,9 +61,7 @@ exports.createUser = async (req, res, next) => {
     const emailExists = await User.findOne({ where: { email: email } });
 
     if (emailExists) {
-      const newError = new Error("This email is already registered.");
-      newError.statusCode = 409;
-      throw newError;
+      throw utils.createNewError("This email is already registered.", 409);
     }
 
     const encryptedPassword = await bcrypt.hash(password, 12);
@@ -66,14 +72,66 @@ exports.createUser = async (req, res, next) => {
       password: encryptedPassword,
     });
 
-    res.status(201).json({
+    return utils.sendResponse(res, 201, {
       success: true,
       user: createdUser,
     });
   } catch (err) {
-    if (!err.statusCode) {
-      err.statusCode = 500;
-    }
     next(err);
   }
 };
+
+exports.login = async (req, res, next) => {
+  const email = req.body.email;
+  const password = req.body.password;
+
+  try {
+    const user = await User.findOne({ where: { email: email } });
+
+    if (!user) {
+      throw utils.createNewError("No user founded with this user E-mail.", 401);
+    }
+
+    const isEqual = await bcrypt.compare(password, user.password);
+
+    if (!isEqual) {
+      throw utils.createNewError("Wrong Password", 401);
+    }
+
+    const token = jwt.sign(
+      {
+        email: user.email,
+        userId: user.id,
+      },
+      TOKEN_SECRET, // My secret
+      {
+        expiresIn: "1h",
+      }
+    );
+
+    return utils.sendResponse(res, 200, { token: token, userId: user.id });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.requestRecoverPassword = async (req, res, next) => {
+  const email = req.body.email;
+
+  try {
+    const user = await User.findOne({ where: { email: email } });
+
+    if (!user) {
+      throw utils.createNewError("No user founded with this user E-mail.", 401);
+    }
+
+    // I stoped here <--------------
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.handleRecoverPassword = (req, res, next) => {};
+
+//It might be a good idea to implement a method to update user data <-------------------
+//Implement a method to reset the user's password

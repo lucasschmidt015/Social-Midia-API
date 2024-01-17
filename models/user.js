@@ -23,6 +23,16 @@ const User = sequelize.define("User", {
     type: Sequelize.STRING,
     allowNull: false,
   },
+  passwordResetToken: {
+    type: Sequelize.STRING,
+    allowNull: true,
+    defaultValue: null,
+  },
+  passwordResetTokenExpiration: {
+    type: Sequelize.DATE,
+    allowNull: true,
+    defaultValue: null,
+  },
 });
 
 User.validate = (body) => {
