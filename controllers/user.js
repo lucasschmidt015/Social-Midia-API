@@ -125,13 +125,44 @@ exports.requestRecoverPassword = async (req, res, next) => {
       throw utils.createNewError("No user founded with this user E-mail.", 401);
     }
 
-    // I stoped here <--------------
+    const updateToken = await utils.createRandomToken();
+
+    user.passwordResetToken = updateToken;
+    user.passwordResetTokenExpiration = Date.now() + 300000;
+    const savedUser = await user.save();
+
+    savedUser.sendResetPasswordEmail(
+      user,
+      `http://localhost:3000/recover_password/${token}`
+    ); // This link here should be a link to your frontend
+
+    return utils.sendResponse(res, 200, "Reset email sent successfully.");
   } catch (err) {
     next(err);
   }
 };
 
-exports.handleRecoverPassword = (req, res, next) => {};
+// testar isso aqui
+exports.handleRecoverPassword = async (req, res, next) => {
+  const { token, newPassword } = req.body;
 
-//It might be a good idea to implement a method to update user data <-------------------
-//Implement a method to reset the user's password
+  const user = User.findOne({ where: { passwordResetToken: token } });
+
+  if (
+    !user ||
+    user.passwordResetToken !== token ||
+    storedToken.expires < Date.now()
+  ) {
+    return utils.createNewError("Invalid or expired token", 400);
+  }
+
+  const newHashedPassword = await bcrypt.hash(newPassword, 12);
+
+  user.password = newHashedPassword;
+  user.passwordResetToken = null;
+  user.passwordResetTokenExpiration = null;
+
+  await user.save();
+
+  return utils.sendResponse(res, 200, "Password reset seccessful");
+};
