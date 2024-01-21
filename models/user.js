@@ -7,6 +7,7 @@ const {
   parsed: { USER_EMAIL_SERVER, PASS_EMAIL_SERVER },
 } = require("dotenv").config();
 
+//Create a nodemailer transporter with Gmail service and SMTP settings
 const transporter = nodemailer.createTransport({
   service: "gmail",
   host: "smtp.gmail.com",
@@ -18,6 +19,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+//Define the user model using Sequelize
 const User = sequelize.define("User", {
   id: {
     type: Sequelize.INTEGER,
@@ -50,6 +52,7 @@ const User = sequelize.define("User", {
   },
 });
 
+//Validate user input using Joi schema
 User.validate = (body) => {
   const userSchema = Joi.object({
     name: Joi.string().alphanum().min(3).max(30).required(),
@@ -61,11 +64,13 @@ User.validate = (body) => {
   return userSchema.validate(body);
 };
 
+//Send a password reset email using nodemailer
 User.sendResetPasswordEmail = (user, linkResetPage) => {
   transporter.sendMail({
     to: user.email,
     from: `SocialMidia ${USER_EMAIL_SERVER}`,
     subject: "Reset your password",
+    //HTML content for the email
     html: `
         <!DOCTYPE html>
         <html>
@@ -111,4 +116,5 @@ User.sendResetPasswordEmail = (user, linkResetPage) => {
   });
 };
 
+//Export the User model
 module.exports = User;

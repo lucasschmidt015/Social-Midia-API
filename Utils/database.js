@@ -1,4 +1,6 @@
 const Sequelize = require("sequelize");
+
+//Extract database configuration parameters from environment variables
 const {
   parsed: {
     DATABASE_NAME,
@@ -9,6 +11,7 @@ const {
   },
 } = require("dotenv").config();
 
+//Create a new Sequelize instace with database connection datails
 const sequelize = new Sequelize(
   DATABASE_NAME,
   DATABASE_USER,
@@ -20,4 +23,5 @@ const sequelize = new Sequelize(
   }
 );
 
+//Export the configured Sequelize instace for use in other parts of the application
 module.exports = sequelize;
