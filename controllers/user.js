@@ -131,38 +131,44 @@ exports.requestRecoverPassword = async (req, res, next) => {
     user.passwordResetTokenExpiration = Date.now() + 300000;
     const savedUser = await user.save();
 
-    savedUser.sendResetPasswordEmail(
+    User.sendResetPasswordEmail(
       user,
-      `http://localhost:3000/recover_password/${token}`
+      `http://localhost:3000/recover_password/${updateToken}`
     ); // This link here should be a link to your frontend
 
-    return utils.sendResponse(res, 200, "Reset email sent successfully.");
+    return utils.sendResponse(res, 200, {
+      success: true,
+      message: "Reset email sent successfully.",
+    });
   } catch (err) {
     next(err);
   }
 };
 
-// testar isso aqui
 exports.handleRecoverPassword = async (req, res, next) => {
   const { token, newPassword } = req.body;
 
-  const user = User.findOne({ where: { passwordResetToken: token } });
+  try {
+    const user = await User.findOne({ where: { passwordResetToken: token } });
 
-  if (
-    !user ||
-    user.passwordResetToken !== token ||
-    storedToken.expires < Date.now()
-  ) {
-    return utils.createNewError("Invalid or expired token", 400);
+    if (
+      !user ||
+      user.passwordResetToken !== token ||
+      user.passwordResetTokenExpiration < Date.now()
+    ) {
+      throw utils.createNewError("Invalid or expired token", 400);
+    }
+
+    const newHashedPassword = await bcrypt.hash(newPassword, 12);
+
+    user.password = newHashedPassword;
+    user.passwordResetToken = null;
+    user.passwordResetTokenExpiration = null;
+
+    await user.save();
+
+    return utils.sendResponse(res, 200, "Password reset seccessful");
+  } catch (err) {
+    next(err);
   }
-
-  const newHashedPassword = await bcrypt.hash(newPassword, 12);
-
-  user.password = newHashedPassword;
-  user.passwordResetToken = null;
-  user.passwordResetTokenExpiration = null;
-
-  await user.save();
-
-  return utils.sendResponse(res, 200, "Password reset seccessful");
 };
