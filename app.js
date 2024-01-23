@@ -10,6 +10,7 @@ const userRouter = require("./routes/user");
 
 //models
 const userModel = require("./models/user");
+const friendshipModel = require("./models/friendship");
 
 //Create an Express application
 const app = express();

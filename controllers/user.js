@@ -68,6 +68,7 @@ exports.createUser = async (req, res, next) => {
 
   //Extract user data from the request body
   const name = req.body.name;
+  const userName = req.body.userName;
   const email = req.body.email;
   const password = req.body.password;
   const confirmPassword = req.body.password;
@@ -87,6 +88,7 @@ exports.createUser = async (req, res, next) => {
     //Create a new user in the database
     const createdUser = await User.create({
       name,
+      userName,
       email,
       password: encryptedPassword,
     });

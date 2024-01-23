@@ -31,6 +31,11 @@ const User = sequelize.define("User", {
     type: Sequelize.STRING(150),
     allowNull: false,
   },
+  userName: {
+    type: Sequelize.STRING(50),
+    allowNull: false,
+    unique: true,
+  },
   email: {
     type: Sequelize.STRING,
     allowNull: false,
@@ -55,7 +60,19 @@ const User = sequelize.define("User", {
 //Validate user input using Joi schema
 User.validate = (body) => {
   const userSchema = Joi.object({
-    name: Joi.string().alphanum().min(3).max(30).required(),
+    name: Joi.string().alphanum().min(3).max(150).required(),
+    userName: Joi.string()
+      .regex(/^[a-zA-Z_-][a-zA-Z0-9_-]*$/)
+      .min(3)
+      .max(50)
+      .required()
+      .messages({
+        "string.pattern.base":
+          'The userName must start with a letter and can contain only letters, numbers, "-", and "_"',
+        "string.min": "The userName must have at least 3 characters",
+        "string.max": "The userName must have at most 50 characters",
+        "any.required": "The userName is required",
+      }),
     email: Joi.string().email().required(),
     password: Joi.string().required(),
     confirmPassword: Joi.string().valid(Joi.ref("password")).required(),
