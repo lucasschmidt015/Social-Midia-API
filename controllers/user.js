@@ -248,3 +248,5 @@ exports.handleRecoverPassword = async (req, res, next) => {
     next(err);
   }
 };
+
+exports.searchUser = (req, res, next) => {}; //Implement this later

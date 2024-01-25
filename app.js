@@ -7,6 +7,7 @@ const cors = require("cors");
 
 //routes
 const userRouter = require("./routes/user");
+const friendshipRouter = require("./routes/friendship");
 
 //models
 const userModel = require("./models/user");
@@ -26,6 +27,8 @@ app.use(express.static(path.join(__dirname, "resources")));
 
 //Use the user router for handling user-related routes
 app.use(userRouter);
+
+app.use(friendshipRouter);
 
 //Error handling middleware
 app.use((error, req, res, next) => {

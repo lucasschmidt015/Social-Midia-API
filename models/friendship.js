@@ -17,7 +17,7 @@ const Friendship = sequelize.define("Friendship", {
     allowNull: false,
     defaultValue: false,
   },
-  userId1: {
+  senderUserId: {
     type: Sequelize.INTEGER,
     allowNull: false,
     references: {
@@ -25,7 +25,7 @@ const Friendship = sequelize.define("Friendship", {
       key: "id",
     },
   },
-  userId2: {
+  receiverUserId: {
     type: Sequelize.INTEGER,
     allowNull: false,
     references: {
@@ -36,13 +36,13 @@ const Friendship = sequelize.define("Friendship", {
 });
 
 Friendship.belongsTo(User, {
-  foreignKey: "userId1",
-  as: "user1",
+  foreignKey: "senderUserId",
+  as: "senderUser",
 });
 
 Friendship.belongsTo(User, {
-  foreignKey: "userId2",
-  as: "user2",
+  foreignKey: "receiverUserId",
+  as: "receiverUser",
 });
 
 module.exports = Friendship;
