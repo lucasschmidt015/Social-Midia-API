@@ -75,11 +75,26 @@ exports.createUser = async (req, res, next) => {
 
   try {
     //Check if the email is already registered
-    const emailExists = await User.findOne({ where: { email: email } });
+    const emailExists = await User.findOne({
+      where: { email: email },
+    });
 
     //If email is already registered, send an error response
     if (emailExists) {
       throw utils.createNewError("This email is already registered.", 409);
+    }
+
+    //Check if the provided userName is already registered.
+    const userNameExists = await User.findOne({
+      where: { userName: userName },
+    });
+
+    //IF the provided userName is already registered, send an error message
+    if (userNameExists) {
+      throw utils.createNewError(
+        "The provided userName is already registered.",
+        409
+      );
     }
 
     //Encrypt the user's password
@@ -146,7 +161,7 @@ exports.login = async (req, res, next) => {
     );
 
     //Send a successful response with the generated token and user ID
-    return utils.sendResponse(res, 200, { token: token, userId: user.id });
+    return utils.sendResponse(res, 200, { token: token });
   } catch (err) {
     next(err);
   }
