@@ -13,6 +13,8 @@ router.post("/create-user", userController.createUser); // Route to create a new
 
 router.post("/login", userController.login); // Route to handle user login
 
+router.post("/refresh_token", userController.refreshToken); // Route to refresh the access token
+
 router.post("/request_recover_password", userController.requestRecoverPassword); //Route to iniciate password recovery
 
 router.post("/recover_password", userController.handleRecoverPassword); //Route to handle password recovery

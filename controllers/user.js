@@ -148,21 +148,89 @@ exports.login = async (req, res, next) => {
       throw utils.createNewError("Wrong Password", 401);
     }
 
-    //Generate a JWT token for the authenticated user
-    const token = jwt.sign(
+    //Generate a JWT accessToken for the authenticated user
+    const accessToken = jwt.sign(
       {
         email: user.email,
         userId: user.id,
       },
-      TOKEN_SECRET, // My secret
+      TOKEN_SECRET,
       {
-        expiresIn: "1h",
+        expiresIn: "10m",
       }
     );
 
-    //Send a successful response with the generated token and user ID
-    return utils.sendResponse(res, 200, { token: token });
+    //Generate a refreshToken for the authenticated user
+    const refreshToken = jwt.sign(
+      {
+        email: user.email,
+      },
+      TOKEN_SECRET,
+      {
+        expiresIn: "1d",
+      }
+    );
+
+    //Send a successful response with the accessToken and the refreshToken
+    return utils.sendResponse(res, 200, { accessToken, refreshToken });
   } catch (err) {
+    next(err);
+  }
+};
+
+/** Allow the client to refresh its accessToken
+ *
+ * @param {Object} res - Express response object.
+ * @param {Function} next - Express next function.
+ * @returns {Promise<void>} - Asynchronous function.
+ */
+exports.refreshToken = async (req, res, next) => {
+  //Extract accessToken and refreshToken from the request body
+  const { accessToken, refreshToken } = req.body;
+
+  //If accessToken or refreshToken are not defined return an error response
+  if (!accessToken || !refreshToken) {
+    next(utils.createNewError("Some input data is missing.", 400));
+  }
+
+  //Check if the accessToken is still valid
+  jwt.verify(accessToken, TOKEN_SECRET, (err, decoded) => {
+    if (!err && decoded) {
+      return next(utils.createNewError("accessToken is still valid", 400));
+    }
+  });
+
+  try {
+    //Check if the refresh token is still valid
+    const decoded = jwt.verify(refreshToken, TOKEN_SECRET);
+
+    //Extract the user email from the decoded object and search for the user
+    const user = await User.findOne({ where: { email: decoded.email } });
+
+    //If the user wasn't found, send an error response
+    if (!user) {
+      throw utils.createNewError("The user is no longer available.", 406);
+    }
+
+    //Generate a new access token with user data
+    const newAccessToken = jwt.sign(
+      {
+        email: user.email,
+        userId: user.id,
+      },
+      TOKEN_SECRET,
+      {
+        expiresIn: "10m",
+      }
+    );
+
+    //Return a success response with the new accessToken
+    return utils.sendResponse(res, 200, { accessToken: newAccessToken });
+  } catch (err) {
+    if (!err.statusCode) {
+      err.message = "Refresh token expired.";
+      err.statusCode = 406;
+    }
     next(err);
   }
 };

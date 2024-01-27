@@ -49,3 +49,5 @@ sequelize
   .catch((err) => {
     console.log(err);
   });
+
+//Remember to implement a refresh token logic to allow the user update its token without made another login request <-----------
