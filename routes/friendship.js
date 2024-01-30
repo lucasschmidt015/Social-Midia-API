@@ -12,7 +12,14 @@ const router = express.Router();
 router.post(
   "/new_friendship_request",
   isAuth,
-  friendshipController.new_friendship_request
+  friendshipController.newFriendshipRequest
+);
+
+//Accept a friendship request
+router.post(
+  "/accept_friendship_request",
+  isAuth,
+  friendshipController.acceptFriendshipRequest
 );
 
 module.exports = router;

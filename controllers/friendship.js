@@ -12,7 +12,7 @@ const utils = require("../utils/utils");
  * @param {fuction} next
  * @returns
  */
-exports.new_friendship_request = async (req, res, next) => {
+exports.newFriendshipRequest = async (req, res, next) => {
   //Extract senderUserId and receiverUserId from the request body
   const { senderUserId, receiverUserId } = req.body;
 
@@ -88,3 +88,67 @@ exports.new_friendship_request = async (req, res, next) => {
     next(err);
   }
 };
+
+/** This method is going to accept a friendship request
+ *
+ * @param {object} req
+ * @param {object} res
+ * @param {fuction} next
+ * @returns
+ */
+exports.acceptFriendshipRequest = async (req, res, next) => {
+  //Extract friendshipRequestId from the request body
+  const { friendshipRequestId } = req.body;
+
+  //If the paramn wasn't passed, send an error response
+  if (!friendshipRequestId) {
+    return next(
+      utils.createNewError("Some input data is missing.", 400, {
+        message: "You need to send friendshipRequestId",
+      })
+    );
+  }
+
+  try {
+    //Find the friendshipRequest in the database
+    const friendshipRequest = await Friendship.findByPk(friendshipRequestId);
+
+    //If the friendship request wasn't found, send an error response
+    if (!friendshipRequest) {
+      throw utils.createNewError(
+        "No friendship request found with the provided id",
+        404,
+        { friendshipRequestId }
+      );
+    }
+
+    //IF the user stored in the friendship request does not metch the user stored
+    //in the request object (Who is accepting isn't the same person that's receiving the friendship
+    //request), send an error reponse
+    if (friendshipRequest.receiverUserId !== req.user.userId) {
+      throw utils.createNewError("Access denied.", 401);
+    }
+
+    //If the friendship request is already accepted, send an error response
+    if (friendshipRequest.accepted) {
+      throw utils.createNewError("Friendship request already accepted.", 400);
+    }
+
+    //Set accepted to true, you guys are friends now :)
+    friendshipRequest.accepted = true;
+
+    //Save the changes in the database
+    await friendshipRequest.save();
+
+    //send the success response.
+    return utils.sendResponse(res, 200, {
+      success: true,
+      message: "Friendship request was accepted.",
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+//We still have to handle the case where a user send a friendship request to another
+//user that already has sent a friendship request to the first one <--------
