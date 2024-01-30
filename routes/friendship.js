@@ -22,4 +22,10 @@ router.post(
   friendshipController.acceptFriendshipRequest
 );
 
+router.delete(
+  "/delete_friendship",
+  isAuth,
+  friendshipController.deleteFriendship
+);
+
 module.exports = router;

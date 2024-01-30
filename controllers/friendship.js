@@ -72,6 +72,27 @@ exports.newFriendshipRequest = async (req, res, next) => {
       );
     }
 
+    const existingFriendshipRequest = await Friendship.findOne({
+      where: { senderUserId: receiverUserId, receiverUserId: senderUserId },
+    });
+
+    //If we already have a friendship request sent by the receiver, it'll be automatically accepted
+    if (existingFriendshipRequest) {
+      if (existingFriendshipRequest.accepted) {
+        return utils.sendResponse(res, 200, {
+          success: true,
+          message: "Users are already friends",
+        });
+      } else {
+        existingFriendshipRequest.accepted = true;
+        await existingFriendshipRequest.save();
+        return utils.sendResponse(res, 200, {
+          success: true,
+          message: "Now the users are friends",
+        });
+      }
+    }
+
     //Store the new Friendship request in the database
     const newFriendship = await Friendship.create({
       accepted: false,
@@ -150,5 +171,56 @@ exports.acceptFriendshipRequest = async (req, res, next) => {
   }
 };
 
-//We still have to handle the case where a user send a friendship request to another
-//user that already has sent a friendship request to the first one <--------
+/** This route handles a friendship deletion
+ *
+ * @param {object} req
+ * @param {object} res
+ * @param {fuction} next
+ * @returns
+ */
+exports.deleteFriendship = async (req, res, next) => {
+  //Extract the friendshipId from the request body
+  const { friendshipId } = req.body;
+
+  //If friendshipId was not passed, send an error reponse
+  if (!friendshipId) {
+    next(
+      utils.createNewError("Some input data is missing", 400, {
+        message: "You need to send friendshipId",
+      })
+    );
+  }
+
+  try {
+    //Find the frindship in the database
+    const friendship = await Friendship.findByPk(friendshipId);
+
+    //No frindship was found with the provided id, send an error
+    if (!friendship) {
+      throw utils.createNewError(
+        "No friendship found with the provided id",
+        404,
+        { friendshipId }
+      );
+    }
+
+    //Check if the request was made by one of the users in the friendship
+    if (
+      friendship.senderUserId !== req.user.userId &&
+      friendship.receiverUserId !== req.user.userId
+    ) {
+      throw utils.createNewError("Access denied", 401);
+    }
+
+    //Delete the friendship
+    await friendship.destroy();
+
+    //Send a success response
+    return utils.sendResponse(res, 200, {
+      success: true,
+      message: "Friendship deleted successfully",
+    });
+  } catch (err) {
+    next(err);
+  }
+};
