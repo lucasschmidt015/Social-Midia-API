@@ -156,7 +156,7 @@ exports.login = async (req, res, next) => {
       },
       TOKEN_SECRET,
       {
-        expiresIn: "10m",
+        expiresIn: "1d", //<------- Remember to put 10m here again
       }
     );
 

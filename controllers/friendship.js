@@ -1,9 +1,78 @@
 //Sequelize models
+const { Sequelize } = require("sequelize");
 const Friendship = require("../models/friendship");
 const User = require("../models/user");
 
 //General
 const utils = require("../utils/utils");
+
+/** This method will list all friends of the user
+ *
+ * @param {object} req
+ * @param {object} res
+ * @param {fuction} next
+ * @returns
+ */
+exports.listAllFriends = async (req, res, next) => {
+  //Pick the id of the logged user
+  const userId = req.user.userId;
+
+  //If the id is not defined, send an error message
+  if (!userId) {
+    return next(utils.createNewError("Access denied.", 401));
+  }
+
+  try {
+    //Find the frindships related to that user
+    const friendships = await Friendship.findAll({
+      where: {
+        [Sequelize.Op.or]: [
+          { senderUserId: userId },
+          { receiverUserId: userId },
+        ],
+      },
+      include: [
+        {
+          model: User,
+          as: "senderUser",
+          where: { id: { [Sequelize.Op.ne]: userId } },
+          required: false,
+        },
+        {
+          model: User,
+          as: "receiverUser",
+          where: { id: { [Sequelize.Op.ne]: userId } },
+          required: false,
+        },
+      ],
+    });
+
+    //If there's no one, send an error response
+    if (!friendships || friendships.length <= 0) {
+      throw utils.createNewError("No friends were found.", 404);
+    }
+
+    //Format the friends array
+    const friends = friendships
+      .filter((friendship) => friendship.accepted)
+      .map((friendship) => {
+        return {
+          Id: friendship.id,
+          accepted: friendship.accepted,
+          userData: friendship.senderUser || friendship.receiverUser,
+        };
+      });
+
+    if (friends.length <= 0) {
+      throw utils.createNewError("No friends were found.", 404);
+    }
+
+    //Send a success response
+    return utils.sendResponse(res, 200, friends);
+  } catch (err) {
+    next(err);
+  }
+};
 
 /** This method will create a new friendship request
  *
