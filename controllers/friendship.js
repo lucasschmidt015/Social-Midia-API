@@ -14,8 +14,12 @@ const utils = require("../utils/utils");
  * @returns
  */
 exports.listAllFriends = async (req, res, next) => {
+  //You could include a query parameter here to say if the user wants just friends accepted or not <----------------
+
   //Pick the id of the logged user
   const userId = req.user.userId;
+
+  const onlyAccepted = req.query.accepted;
 
   //If the id is not defined, send an error message
   if (!userId) {
@@ -53,15 +57,18 @@ exports.listAllFriends = async (req, res, next) => {
     }
 
     //Format the friends array
-    const friends = friendships
-      .filter((friendship) => friendship.accepted)
-      .map((friendship) => {
-        return {
-          Id: friendship.id,
-          accepted: friendship.accepted,
-          userData: friendship.senderUser || friendship.receiverUser,
-        };
-      });
+    let friends = friendships.map((friendship) => {
+      return {
+        Id: friendship.id,
+        accepted: friendship.accepted,
+        userData: friendship.senderUser || friendship.receiverUser,
+      };
+    });
+
+    //if the onlyAccepted query parameter was defined and it's true will filter only the frinds accepteds.
+    if (onlyAccepted === "true") {
+      friends = friends.filter((friendship) => friendship.accepted);
+    }
 
     if (friends.length <= 0) {
       throw utils.createNewError("No friends were found.", 404);
@@ -234,6 +241,64 @@ exports.acceptFriendshipRequest = async (req, res, next) => {
     return utils.sendResponse(res, 200, {
       success: true,
       message: "Friendship request was accepted.",
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/** This route is used to reject a friendship request
+ *
+ * @param {object} req
+ * @param {object} res
+ * @param {fuction} next
+ * @returns
+ */
+exports.rejectFriendshipRequest = async (req, res, next) => {
+  //Extract friendshipRequestId from the request body
+  const { friendshipRequestId } = req.body;
+
+  //If the paramn wasn't passed, send an error response
+  if (!friendshipRequestId) {
+    return next(
+      utils.createNewError("Some input data is missing.", 400, {
+        message: "You need to send friendshipRequestId",
+      })
+    );
+  }
+
+  try {
+    //Find the friendshipRequest in the database
+    const friendshipRequest = await Friendship.findByPk(friendshipRequestId);
+
+    //If the friendship request wasn't found, send an error response
+    if (!friendshipRequest) {
+      throw utils.createNewError(
+        "No friendship request found with the provided id",
+        404,
+        { friendshipRequestId }
+      );
+    }
+
+    //IF the user stored in the friendship request does not metch the user stored
+    //in the request object (Who is rejecting isn't the same person that's receiving the friendship
+    //request), send an error reponse
+    if (friendshipRequest.receiverUserId !== req.user.userId) {
+      throw utils.createNewError("Access denied.", 401);
+    }
+
+    //If the friendship request is already accepted, send an error response
+    if (friendshipRequest.accepted) {
+      throw utils.createNewError("Friendship request already accepted.", 400);
+    }
+
+    //Destroy the friendship request
+    await friendshipRequest.destroy();
+
+    //Send a success message
+    return utils.sendResponse(res, 200, {
+      success: true,
+      message: "Friendship request was rejected.",
     });
   } catch (err) {
     next(err);

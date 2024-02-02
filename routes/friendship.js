@@ -25,6 +25,12 @@ router.post(
   friendshipController.acceptFriendshipRequest
 );
 
+router.post(
+  "/reject_friendship_request",
+  isAuth,
+  friendshipController.rejectFriendshipRequest
+);
+
 router.delete(
   "/delete_friendship",
   isAuth,
