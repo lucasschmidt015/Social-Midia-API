@@ -14,8 +14,6 @@ const utils = require("../utils/utils");
  * @returns
  */
 exports.listAllFriends = async (req, res, next) => {
-  //You could include a query parameter here to say if the user wants just friends accepted or not <----------------
-
   //Pick the id of the logged user
   const userId = req.user.userId;
 
